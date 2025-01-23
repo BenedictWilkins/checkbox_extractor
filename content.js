@@ -1,93 +1,76 @@
-// Listen for messages from the popup
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "extractCheckboxes") {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        const checkboxData = [];
+// Function to extract all styles for a given element
+function getAllElementStyles(element) {
+    const styles = window.getComputedStyle(element);
+    let styleString = '';
 
-        checkboxes.forEach((checkbox, index) => {
-            console.log(`\n--- Analyzing Checkbox ${index} ---`);
+    for (let i = 0; i < styles.length; i++) {
+        const prop = styles[i];
+        styleString += `${prop}: ${styles.getPropertyValue(prop)}; `;
+    }
 
-            // Get associated label
-            let label = null;
-            if (checkbox.id) {
-                label = document.querySelector(`label[for="${checkbox.id}"]`);
-            }
+    return styleString;
+}
 
-            // Generate a unique class for this checkbox
-            const uniqueClass = `checkbox-preview-${index}`;
+// Function to extract styles for pseudo-elements
+function getPseudoElementStyles(element, pseudo) {
+    const styles = window.getComputedStyle(element, pseudo);
+    let styleString = '';
 
-            // Function to get all relevant styles for an element
-            function getAllRelevantStyles(element) {
-                const styles = {};
-                const sheets = document.styleSheets;
+    for (let i = 0; i < styles.length; i++) {
+        const prop = styles[i];
+        styleString += `${prop}: ${styles.getPropertyValue(prop)}; `;
+    }
 
-                for (let sheet of sheets) {
-                    try {
-                        const rules = sheet.cssRules || sheet.rules;
-                        for (let rule of rules) {
-                            if (!rule.selectorText) continue;
+    return styleString;
+}
 
-                            const selectors = rule.selectorText.split(',').map(s => s.trim());
-                            for (let selector of selectors) {
-                                try {
-                                    // Match the element itself and its :checked state
-                                    if (element.matches(selector.split(':')[0]) || element.matches(selector)) {
-                                        styles[selector] = rule.style.cssText;
-                                    }
-                                } catch (e) {
-                                    console.log('Invalid selector:', selector);
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.log('CORS error for stylesheet');
-                    }
-                }
-                return styles;
-            }
+// Function to extract checkboxes and their labels with scoped styles
+function extractCheckboxes() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const checkboxData = [];
 
-            // Extract current HTML and state
-            const checkboxHTML = checkbox.outerHTML.replace(
-                /<input([^>]+)>/,
-                `<input$1${checkbox.checked ? ' checked' : ''}>`
-            );
+    checkboxes.forEach((checkbox, index) => {
+        console.log(`Processing checkbox ${index}`);
 
-            // Get styles for checkbox and label only
-            const checkboxStyles = getAllRelevantStyles(checkbox);
-            const labelStyles = label ? getAllRelevantStyles(label) : {};
+        const label = document.querySelector(`label[for="${checkbox.id}"]`) || checkbox.closest('label');
+        const checkboxId = `checkbox-${index}`;
+        const labelId = `label-${index}`;
 
-            // Combine all relevant styles
-            const relevantStyles = { ...checkboxStyles, ...labelStyles };
+        const checkboxHTML = `<input type="checkbox" id="${checkboxId}" ${checkbox.checked ? 'checked' : ''}>`;
+        const labelHTML = label ? `<label for="${checkboxId}" id="${labelId}">${label.innerHTML}</label>` : '';
 
-            // Create a combined CSS string from all relevant styles, scoping them with the unique class
-            const cssString = Object.entries(relevantStyles)
-                .flatMap(([selector, style]) => {
-                    const scopedSelector = selector.split(',').map(sel => {
-                        const baseSelector = sel.split(' ').pop();
-                        return `.${uniqueClass} ${baseSelector}`;
-                    }).join(',');
-                    return `${scopedSelector} { ${style} }`;
-                })
-                .filter((style, index, self) => self.indexOf(style) === index)
-                .join('\n');
+        const styleContent = `
+            #${checkboxId} { ${getAllElementStyles(checkbox)} }
+            #${labelId} { ${label ? getAllElementStyles(label) : ''} }
+            #${checkboxId}::before { ${getPseudoElementStyles(checkbox, '::before')} }
+            #${checkboxId}::after { ${getPseudoElementStyles(checkbox, '::after')} }
+            #${checkboxId}:checked { ${getPseudoElementStyles(checkbox, ':checked')} }
+            #${labelId}::before { ${label ? getPseudoElementStyles(label, '::before') : ''} }
+            #${labelId}::after { ${label ? getPseudoElementStyles(label, '::after') : ''} }
+        `;
 
-            // Update the HTML context with the unique class
-            const htmlString = `<div class="${uniqueClass}">
-                ${checkboxHTML}
-                ${label ? label.outerHTML : ''}
-            </div>`;
+        const containerHTML = `
+            <div>
+                <style>${styleContent}</style>
+                ${checkboxHTML}${labelHTML}
+            </div>
+        `;
 
-            checkboxData.push({
-                id: checkbox.id,
-                name: checkbox.name,
-                checked: checkbox.checked,
-                html: htmlString,
-                css: cssString,
-                labelText: label ? label.textContent.trim() : ''
-            });
+        checkboxData.push({
+            html: containerHTML
         });
 
-        sendResponse({ checkboxes: checkboxData });
+        console.log(`Checkbox ${index} extracted with scoped styles`, containerHTML);
+    });
+
+    return { checkboxes: checkboxData };
+}
+
+// Listen for messages from the popup script
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "extractCheckboxes") {
+        console.log('Received extractCheckboxes action');
+        const data = extractCheckboxes();
+        sendResponse(data);
     }
-    return true;
 });

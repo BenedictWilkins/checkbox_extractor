@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Checkbox Extractor",
+  "version": "1.0",
+  "description": "Extracts checkboxes and their styles from web pages",
+  "permissions": [
+    "activeTab",
+    "tabs"
+  ],
+  "browser_action": {
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}

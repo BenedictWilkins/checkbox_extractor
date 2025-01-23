@@ -1,20 +1,39 @@
 body {
     width: 300px;
     padding: 10px;
+    margin: 0;
 }
 
 #results {
     margin-top: 10px;
-    white-space: pre-wrap;
+    white-space: normal;
+    /* Collapse whitespace and wrap text */
     max-height: 400px;
     overflow-y: auto;
 }
 
-.checkbox-item {
-    margin: 15px 0;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.checkbox-grid {
+    display: flex;
+    flex-wrap: wrap;
+    /* Allow items to wrap to the next line */
+    gap: 10px;
+    /* Small gap between checkbox items */
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.checkbox-wrapper {
+    display: inline-block;
+    /* Allows the element to shrink to fit its content */
+    box-sizing: border-box;
+    margin: 0;
+    /* Remove margin */
+    padding: 0;
+    /* Remove padding */
+    width: auto;
+    /* Allow width to be determined by content */
+    max-width: none;
+    /* Remove any maximum width constraint */
 }
 
 .count-info {

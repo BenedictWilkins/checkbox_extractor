@@ -1,4 +1,4 @@
-document.getElementById('extract').addEventListener('click', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         if (!tabs[0]) {

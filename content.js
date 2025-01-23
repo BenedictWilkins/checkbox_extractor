@@ -77,19 +77,9 @@ function setAndWait(checkbox, checked) {
 async function extractCheckboxes() {
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
     const checkboxData = [];
-    const seenCheckboxes = new Set();
 
-    for (const [index, checkbox] of checkboxes.entries()) {
-        // Create a unique identifier for each checkbox
-        const uniqueIdentifier = `${checkbox.id}-${checkbox.name}-${checkbox.className}`;
-
-        // Skip if this checkbox has already been processed
-        if (seenCheckboxes.has(uniqueIdentifier)) {
-            console.log(`Skipping duplicate checkbox ${index}`);
-            continue;
-        }
-
-        seenCheckboxes.add(uniqueIdentifier);
+    // Create an array of promises for processing each checkbox
+    const checkboxPromises = Array.from(checkboxes).map(async (checkbox, index) => {
         console.log(`Processing checkbox ${index}`);
 
         const label = document.querySelector(`label[for="${checkbox.id}"]`);
@@ -101,12 +91,10 @@ async function extractCheckboxes() {
 
         // Capture styles for the unchecked state
         await setAndWait(checkbox, false);
-        console.log('Checkbox is unchecked');
         const uncheckedStyles = captureStyles(checkbox, label);
 
         // Capture styles for the checked state
         await setAndWait(checkbox, true);
-        console.log('Checkbox is checked');
         const checkedStyles = captureStyles(checkbox, label);
 
         // Restore the original checked state
@@ -147,8 +135,11 @@ async function extractCheckboxes() {
             html: uncheckedContainerHTML + checkedContainerHTML
         });
 
-        console.log(`Checkbox ${index} extracted with scoped styles`, uncheckedContainerHTML, checkedContainerHTML);
-    }
+        console.log(`Checkbox ${index} processed`);
+    });
+
+    // Wait for all checkbox processing to complete
+    await Promise.all(checkboxPromises);
 
     return { checkboxes: checkboxData };
 }
